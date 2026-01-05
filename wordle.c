@@ -14,8 +14,8 @@ char *validateAnswer(char *answer);
 char *getGuess();
 bool validateGuessLength(char *guess);
 void printGuess(char *guess);
-
 int gameLoop(char *answer, int guesses);
+int checkGuess(char *answer, char *guess);
 
 int main(int argc, char *argv[])
 {
@@ -27,6 +27,10 @@ int main(int argc, char *argv[])
     }
 
     char *answer = extractAnswer(argv);
+    if (answer == NULL)
+    {
+        return -1;
+    }
     // printf("%s\n", answer);
     printWelcomeMessage();
 
@@ -120,26 +124,26 @@ char *validateAnswer(char *answer)
 char *getGuess()
 {
     int c;
-    int letters = 5;
+    int letters = 6;
     int count = 0;
     char *guess = malloc(letters * sizeof(char));
     while ((c = getchar()) != '\n' && c != EOF)
     {
 
-        if (count > letters)
+        if (count >= letters - 1)
         {
-            char *temp = realloc(guess, sizeof(char) * 2);
+            letters *= 2;
+            char *temp = realloc(guess, letters);
             if (temp == NULL)
             {
                 printf("Memory allocation failed\n");
                 return NULL;
             }
-            letters *= 2;
+            guess = temp;
         }
-        guess[count] = toupper((char)c);
-        count++;
+        guess[count++] = toupper((char)c);
     }
-    guess[count++] = '\0';
+    guess[count] = '\0';
     return guess;
 }
 
@@ -155,7 +159,8 @@ bool validateGuessLength(char *guess)
 
 int gameLoop(char *answer, int guesses)
 {
-    printf("answer: %s\n", answer);
+    int proceed = -1;
+    // printf("answer: %s\n", answer);
     bool valid_guess = false;
     do
     {
@@ -163,25 +168,30 @@ int gameLoop(char *answer, int guesses)
         char *guess = getGuess();
         if (strcmp(guess, "QUIT") == 0)
         {
+            free(guess);
             return -1;
         }
         valid_guess = validateGuessLength(guess);
         if (valid_guess)
         {
             guesses--;
-            printGuess(guess);
-            // printf("your guess: %s\n", guess);
+            // checkguess
+            proceed = checkGuess(answer, guess);
+            if (proceed == 0)
+            {
+                return 0;
+            }
+            // printGuess(guess);
+            //  printf("your guess: %s\n", guess);
         }
         else
         {
             printf("Your guess can only be 5 characters long\n");
         }
-        if (strcmp(guess, answer) == 0)
-        {
-            return 0;
-        }
         printf("Number of guesses remaining: %d\n", guesses);
+        free(guess);
     } while (!valid_guess || guesses > 0);
+
     return -2;
 }
 
@@ -196,4 +206,46 @@ void printGuess(char *guess)
         }
     }
     printf("\n");
+}
+
+int checkGuess(char *answer, char *guess)
+{
+    char output[10] = {'_', ' ', '_', ' ', '_', ' ', '_', ' ', '_', '\0'};
+    // if the word is fully correct:
+    if (strcmp(guess, answer) == 0)
+    {
+        return 0;
+    }
+    for (int i = 0; i < WORD_LENGTH; i++)
+    {
+        // correct position
+        if (answer[i] == guess[i])
+        {
+            int new_idx = 2 * i;
+            output[new_idx] = guess[i];
+        }
+        else
+        {
+            // right letter, wrong position
+            char *first_occurence = strchr(answer, guess[i]);
+            if (first_occurence != NULL)
+            {
+
+                int wrong_place = 2 * i;
+
+                output[wrong_place] = '*';
+            }
+        }
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+
+        printf("%c", output[i]);
+        if (i == 9)
+        {
+            printf("\n");
+        }
+    }
+    return -1;
 }
